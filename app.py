@@ -1,0 +1,171 @@
+from flask import Flask, request, session, jsonify
+from flask_sqlalchemy import SQLAlchemy
+import pymysql
+from flask_sqlalchemy.session import Session
+import http.client, urllib, json
+import jwt
+from datetime import datetime,timedelta
+import re
+
+app = Flask(__name__)
+app.secret_key = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
+# app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://账号:密码@数据库ip地址:端口号/数据库名"
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:123456@127.0.0.1:3306/winter"
+# app.config['SQLALCHEMY_BINDS'] = {}
+
+# 关闭数据库修改跟踪操作[提高性能]，可以设置为True，这样可以跟踪操作：
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 开启输出底层执行的sql语句
+app.config['SQLALCHEMY_ECHO'] = True
+
+# 开启数据库的自动提交功能[一般不使用]
+app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = False
+
+db = SQLAlchemy(app)
+
+session = Session(db)
+
+
+# 数据库的模型，继承
+class Role(db.Model):
+    # 定义表名
+    __tablename__ = "roles"
+
+    # 定义字段
+    id = db.Column(db.Integer, primary_key=True, index=True)  # 设置主键, 默认自增
+    name = db.Column(db.String(16), unique=True)
+
+
+class Users(db.Model):
+    # 用户表格
+    __tablename__ = "users"
+    # 用户id
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    # 用户名
+    username = db.Column(db.String(16), unique=True)
+    # 密码
+    password = db.Column(db.String(128), nullable=False)
+    # 邮箱
+    email = db.Column(db.String(255), unique=True, index=True)
+    # 积分值
+    integral = db.Column(db.Integer, default=0)
+    # 外键 需要传参-ForeignKey,表名.id
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+
+@app.route('/hello')
+def index():
+    return "hello/world"
+
+
+@app.route('/user/register', methods=['POST'])
+def register():
+    if request.method == 'POST':
+        # POST、GET:
+        # request.form获得所有post参数放在一个类似dict类中,to_dict()是字典化
+        # 单个参数可以通过request.form.to_dict().get("xxx","")获得
+        param = request.form.to_dict()  # 字典param
+        username = param.get('username')
+        password = param.get('password')
+        email = param.get('email')
+
+        # 检查参数是否符合要求
+        if len(username) > 16:
+            return jsonify({'code': '400', 'msg': '用户名长度不能超过16个字符'})
+
+        if len(password) < 6 or not any(char.isdigit() for char in password) or not any(
+                char.isalpha() for char in password):
+            return jsonify({'code': '400', 'msg': '密码必须包含至少6个字符，且包含数字和字母'})
+
+        # 查询数据库，判断用户名是否已经存在
+        user = Users.query.filter_by(username=username).first()
+        if user is not None:
+            return jsonify({'code': '400', 'msg': '用户名已经存在'})
+
+        # 查询数据库，判断邮箱是否已经存在
+        user = Users.query.filter_by(email=email).first()
+        if user is not None:
+            return jsonify({'code': '400', 'msg': '该邮箱已经被注册'})
+
+        # 创建新用户
+        user = Users(username=username, password=password, email=email)
+        session.add(user)
+        session.commit()
+
+        db.session.rollback()
+        return jsonify({'code': '200', 'msg': '注册成功'})
+
+
+@app.route('/user/login', methods=['POST'])
+def login():
+    username = request.values.get('username')
+    password = request.values.get('password')
+
+    data = session.query(Users).filter(
+        Users.username == username, Users.password == password).all()
+
+    db.session.rollback()
+    if username and password:
+        if len(data) >= 1:
+            # token 一小时内有效
+            payload = {'username': username, 'exp': datetime.utcnow() + timedelta(hours=1)}
+            secret_key = 'sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds'
+            algorithm = 'HS256'
+            token = jwt.encode(payload, secret_key, algorithm=algorithm)
+            return jsonify({'code': '200', 'msg': '登录成功', 'token': token})
+        return jsonify({'code': '401', 'msg': '账号或密码不正确'})
+    return jsonify({'code': '404', 'msg': '账号或密码为空'})
+
+
+@app.route('/api/app/text_classification', methods=['POST'])
+def text_classification():
+    # 调用api
+    if request.method == 'POST':
+        word = request.form.get('word')
+        key = request.form.get('key')
+    conn = http.client.HTTPSConnection('apis.tianapi.com')  # 接口域名
+    params = urllib.parse.urlencode({'key': key, 'word': word})
+    headers = {'Content-type': 'application/x-www-form-urlencoded'}
+    conn.request('POST', '/lajifenlei/index', params, headers)
+    tianapi = conn.getresponse()
+    result = tianapi.read()
+    data = result.decode('utf-8')
+    # 获取的返回字典
+    dict_data = json.loads(data)
+
+    code = dict_data['code']
+    msg = dict_data['msg']
+    list_data = dict_data['result']['list']  # 获取'result'中的'list'列表.一个包含一个字典元素的列表
+    new_list_data = []
+
+    for item in list_data:
+        name = item['name']  # 提取'name'键对应的值
+        type = item['type']  # 提取'type'键对应的值
+        # 根据对应的值给出类型
+        if type == 0:
+            type_transform = "可回收"
+        if type == 1:
+            type_transform = "有害"
+        if type == 2:
+            type_transform = "厨余(湿)"
+        if type == 3:
+            type_transform = "其他(干)"
+        explain = item['explain']  # 提取'explain'键对应的值K
+        contain = item['contain']  # 提取'contain'键对应的值
+        tip = item['tip']  # 提取'tip'键对应的值
+        # 新增键值：
+        item.update({"type_name": type_transform})
+        new_list_data.append(item)
+    try:
+        new_list_data = {"code": code, "msg": msg, "result": new_list_data}
+        return json.dumps(new_list_data)
+    except ValueError as e:
+        return json.dumps({'error': str(e)})
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+    app.run(host='0.0.0.0', port=8000, debug=True)
