@@ -1,17 +1,17 @@
 from flask import Flask, request, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
-import pymysql
 from flask_sqlalchemy.session import Session
 import http.client, urllib, json
 import jwt
 from datetime import datetime,timedelta
-import re
 
 app = Flask(__name__)
-app.secret_key = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
+
+app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
+# app.secret_key = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
+
 # app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://账号:密码@数据库ip地址:端口号/数据库名"
 app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:123456@127.0.0.1:3306/winter"
-# app.config['SQLALCHEMY_BINDS'] = {}
 
 # 关闭数据库修改跟踪操作[提高性能]，可以设置为True，这样可以跟踪操作：
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -22,8 +22,10 @@ app.config['SQLALCHEMY_ECHO'] = True
 # 开启数据库的自动提交功能[一般不使用]
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = False
 
+# 创建了一个 SQLAlchemy 对象 db
 db = SQLAlchemy(app)
 
+# Session 是 SQLAlchemy 中的一个类，用于管理数据库会话和事务
 session = Session(db)
 
 
@@ -54,17 +56,11 @@ class Users(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
 
 
-@app.route('/hello')
-def index():
-    return "hello/world"
-
 
 @app.route('/user/register', methods=['POST'])
 def register():
     if request.method == 'POST':
-        # POST、GET:
-        # request.form获得所有post参数放在一个类似dict类中,to_dict()是字典化
-        # 单个参数可以通过request.form.to_dict().get("xxx","")获得
+
         param = request.form.to_dict()  # 字典param
         username = param.get('username')
         password = param.get('password')
@@ -99,25 +95,49 @@ def register():
 
 @app.route('/user/login', methods=['POST'])
 def login():
+    # 输入用户名和密码
     username = request.values.get('username')
     password = request.values.get('password')
-
+    # 查询数据库是否有此用户
     data = session.query(Users).filter(
         Users.username == username, Users.password == password).all()
-
+    # 回滚
     db.session.rollback()
+    # 都不为空
     if username and password:
+        # 查询到此用户
         if len(data) >= 1:
-            # token 一小时内有效
-            payload = {'username': username, 'exp': datetime.utcnow() + timedelta(hours=1)}
+
+            # 生成token 5小时内有效
+            payload = {'username': username, 'exp': datetime.utcnow() + timedelta(hours=5)}
             secret_key = 'sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds'
             algorithm = 'HS256'
             token = jwt.encode(payload, secret_key, algorithm=algorithm)
+
+            # 登录成功->使用 session 来存储用户登录状态和个人信息
+            session['username'] = request.form['username']
+
             return jsonify({'code': '200', 'msg': '登录成功', 'token': token})
         return jsonify({'code': '401', 'msg': '账号或密码不正确'})
     return jsonify({'code': '404', 'msg': '账号或密码为空'})
 
+@app.route('/user/logout')
+def logout():
+    # 清除session
+    session.pop('username', None)
 
+# 用户界面
+@app.route('/user/index')
+def api_user_profile():
+    # 如果已登录，得到用户名
+    if 'username' in session:
+        username = session.get('username')
+    # 从数据库中获取用户信息
+    user = Users.query.filter_by(name=username).all()
+    # 将 Python 对象转换成 JSON 格式并返回
+    return jsonify(user)
+
+# 文字识别并且返回识别结果
 @app.route('/api/app/text_classification', methods=['POST'])
 def text_classification():
     # 调用api
