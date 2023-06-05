@@ -8,7 +8,6 @@ from datetime import datetime,timedelta
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
-# app.secret_key = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
 
 # app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://账号:密码@数据库ip地址:端口号/数据库名"
 app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:123456@127.0.0.1:3306/winter"
@@ -26,7 +25,7 @@ app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = False
 db = SQLAlchemy(app)
 
 # Session 是 SQLAlchemy 中的一个类，用于管理数据库会话和事务
-session = Session(db)
+Session = Session(db)
 
 
 # 数据库的模型，继承
@@ -86,8 +85,8 @@ def register():
 
         # 创建新用户
         user = Users(username=username, password=password, email=email)
-        session.add(user)
-        session.commit()
+        Session.add(user)
+        Session.commit()
 
         db.session.rollback()
         return jsonify({'code': '200', 'msg': '注册成功'})
@@ -99,7 +98,7 @@ def login():
     username = request.values.get('username')
     password = request.values.get('password')
     # 查询数据库是否有此用户
-    data = session.query(Users).filter(
+    data = Session.query(Users).filter(
         Users.username == username, Users.password == password).all()
     # 回滚
     db.session.rollback()
@@ -114,7 +113,7 @@ def login():
             algorithm = 'HS256'
             token = jwt.encode(payload, secret_key, algorithm=algorithm)
 
-            # 登录成功->使用 session 来存储用户登录状态和个人信息
+            # 登录成功->使用 Session 来存储用户登录状态和个人信息
             session['username'] = request.form['username']
 
             return jsonify({'code': '200', 'msg': '登录成功', 'token': token})
@@ -123,7 +122,7 @@ def login():
 
 @app.route('/user/logout')
 def logout():
-    # 清除session
+    # 清除Session
     session.pop('username', None)
 
 # 用户界面
