@@ -1,9 +1,12 @@
+from tkinter import Image
+import numpy as np
 from flask import Flask, request, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.session import Session
 import http.client, urllib, json
 import jwt
-from datetime import datetime,timedelta
+import model
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -181,6 +184,22 @@ def text_classification():
         return json.dumps(new_list_data)
     except ValueError as e:
         return json.dumps({'error': str(e)})
+
+@app.route('/app/picture_classification', methods=['POST'])
+def predict():
+    # 读取图片数据
+    img_file = request.files['image']
+    img = Image.open(img_file.stream)
+    img = img.resize((150, 150))
+    img = np.array(img) / 255.0
+    img = np.expand_dims(img, axis=0)
+
+    # 进行预测
+    pred = model.predict(img)[0]
+    label = np.argmax(pred)
+
+    # 返回预测结果
+    return jsonify({'label': str(label)})
 
 
 if __name__ == '__main__':
