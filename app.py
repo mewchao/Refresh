@@ -7,7 +7,7 @@ import http.client, urllib, json
 import jwt
 import model
 from datetime import datetime, timedelta
-
+import token
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
@@ -29,6 +29,8 @@ db = SQLAlchemy(app)
 
 # Session 是 SQLAlchemy 中的一个类，用于管理数据库会话和事务
 Session = Session(db)
+
+
 
 
 # 数据库的模型，继承
@@ -110,7 +112,7 @@ def login():
         # 查询到此用户
         if len(data) >= 1:
 
-            # 生成token 5小时内有效
+            # 生成token 5 小时内有效
             payload = {'username': username, 'exp': datetime.utcnow() + timedelta(hours=5)}
             secret_key = 'sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds'
             algorithm = 'HS256'

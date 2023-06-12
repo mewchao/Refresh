@@ -1,16 +1,14 @@
-import tensorflow as tf
-from tensorflow import keras
+import matplotlib.pyplot as plt
 import numpy as np
-import os
-import PIL
-import PIL.Image
 import tensorflow as tf
 import tensorflow_datasets as tfds
-
+# from tensorflow.keras import layers
+import tensorflow as tf
+import tensorflow_datasets as tfds
 import pathlib
 
+# 加载图像
 data_dir = pathlib.Path(r"D:\garbage\garbage_classify_v2\garbage_classify_v2\train")
-
 
 # 设置参数
 batch_size = 32
@@ -70,14 +68,14 @@ model.compile(
   optimizer='adam',
   loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
   metrics=['accuracy'])
-
-# 训练模型
-model.fit(
-  train_ds,
-  validation_data=val_ds,
-  epochs=3
-)
-
-# 保存模型
+#
+# # 训练模型
+# model.fit(
+#   train_ds,
+#   validation_data=val_ds,
+#   epochs=10
+# )
+#
+# # 保存模型
 # model.save('my_model')
 
