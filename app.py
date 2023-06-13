@@ -1,32 +1,22 @@
+from datetime import datetime, timedelta
 from tkinter import Image
-import numpy as np
+from PIL import Image
 from flask import Flask, request, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.session import Session
-import http.client, urllib, json
-import jwt
-import tensorflow as tf
-from PIL import Image
-from matplotlib import pyplot as plt
+import http.client
 import json
-
-
-
-# 现在你可以使用data变量来访问JSON数据
-# 例如，打印整个JSON对象
-# print(data)
-# 或者访问特定的字段
-# print(data['1'])
-
-
-import my_model
-from datetime import datetime, timedelta
+import urllib
+import jwt
+import numpy as np
+import tensorflow as tf
 import my_token
 
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
-SECRET_KEY="sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
+
+SECRET_KEY = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
 
 # app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://账号:密码@数据库ip地址:端口号/数据库名"
 app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:123456@127.0.0.1:3306/winter"
@@ -72,6 +62,30 @@ class Users(db.Model):
     integral = db.Column(db.Integer, default=0)
     # 外键 需要传参-ForeignKey,表名.id
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+
+# 定义项目模型类
+# 定义项目模型类
+class Projects(db.Model):
+    # 项目id
+    project_id = db.Column(db.Integer, primary_key=True)
+    # 项目名称
+    project_name = db.Column(db.String(100), nullable=False)
+    # 项目描述
+    project_description = db.Column(db.String(255))
+    # 项目图片文件名
+    project_image_filename = db.Column(db.String(100))
+    # 项目图片URL
+    project_image_url = db.Column(db.String(200))
+    # 项目创建时间
+    project_datetime = db.Column(db.DateTime, default=datetime.utcnow)
+    # 项目创建时间的星期信息
+    project_weekday = db.Column(db.Integer)
+
+    def set_weekday(self):
+        # 通过调用created_at.weekday()方法获取星期信息
+        if self.project_datetime is not None:
+            self.project_weekday = self.project_datetime.weekday()
 
 
 @app.route('/user/register', methods=['POST'])
@@ -156,6 +170,65 @@ def api_user_profile():
     return jsonify(user)
 
 
+# 定义项目列表的API路由
+# 添加项目的路由
+@app.route('/index/projects', methods=['POST'])
+def add_project():
+    token = request.headers.get('token')
+
+    if my_token.is_token_valid(token, SECRET_KEY):
+        # 从请求中获取项目信息
+        project_data = request.json
+        print(project_data)
+
+        project_name = project_data.get('project_name')
+        project_description = project_data.get('project_description')
+        project_image_filename = project_data.get('project_image_filename')
+        project_image_url = project_data.get('project_image_url')
+
+        # 创建新的项目对象
+        new_project = Projects(
+            project_name=project_name,
+            project_description=project_description,
+            project_image_filename=project_image_filename,
+            project_image_url=project_image_url,
+            project_datetime=datetime.utcnow()  # 设置当前日期和时间
+        )
+        # 设置项目的创建时间和星期信息
+        new_project.set_weekday()
+
+        # 将项目添加到数据库
+        db.session.add(new_project)
+        db.session.commit()
+
+        return json.dumps({"code": 200, "msg": "success"})
+    else:
+        return json.dumps({"code": 404, "msg": "请先进行登录"})
+
+# 获取项目的路由
+@app.route('/index/projects', methods=['GET'])
+def get_projects():
+    # 查询所有项目
+    projects = Projects.query.all()
+
+    # 构建项目列表
+    project_list = []
+    for project in projects:
+        project_data = {
+            'project_id': project.project_id,
+            'project_name': project.project_name,
+            'project_description': project.project_description,
+            'project_image_filename': project.project_image_filename,
+            'project_image_url': project.project_image_url,
+            'project_datetime': project.project_datetime,
+            'project_weekday' : project.project_weekday,
+        }
+        project_list.append(project_data)
+
+    # 返回项目列表
+    return jsonify(project_list)
+
+
 # 文字识别并且返回识别结果
 @app.route('/api/app/text_classification', methods=['POST'])
 def text_classification():
@@ -164,6 +237,7 @@ def text_classification():
         word = request.form.get('word')
         key = "6b8c7b0e789eeea19781760728d72be9"
         token = request.headers.get('token')
+
     if my_token.is_token_valid(token, SECRET_KEY):
         conn = http.client.HTTPSConnection('apis.tianapi.com')  # 接口域名
         params = urllib.parse.urlencode({'key': key, 'word': word})
@@ -204,7 +278,8 @@ def text_classification():
         except ValueError as e:
             return json.dumps({'error': str(e)})
     else:
-        return json.dumps({"code": 404, "msg":  "请先进行登录"})
+        return json.dumps({"code": 404, "msg": "请先进行登录"})
+
 
 @app.route('/app/picture_classification', methods=['POST'])
 def predict():
@@ -236,7 +311,6 @@ def predict():
         input_tensor = tf.repeat(input_tensor, 3, axis=-1)  # 复制通道维度
         # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
 
-
         print(input_image)
         predictions = my_model.predict(input_tensor)[0]
 
@@ -251,10 +325,10 @@ def predict():
         return jsonify({'garbage': str(data[str(label)])})
 
     else:
-        return json.dumps({"code": 404, "msg":  "请先进行登录"})
+        return json.dumps({"code": 404, "msg": "请先进行登录"})
+
 
 if __name__ == '__main__':
     with app.app_context():
-        db.drop_all()
         db.create_all()
     app.run(host='0.0.0.0', port=8000, debug=True)
