@@ -8,6 +8,16 @@ import jwt
 import tensorflow as tf
 from PIL import Image
 from matplotlib import pyplot as plt
+import json
+
+
+
+# 现在你可以使用data变量来访问JSON数据
+# 例如，打印整个JSON对象
+# print(data)
+# 或者访问特定的字段
+# print(data['1'])
+
 
 import my_model
 from datetime import datetime, timedelta
@@ -198,6 +208,10 @@ def text_classification():
 
 @app.route('/app/picture_classification', methods=['POST'])
 def predict():
+    # 打开JSON文件
+    with open('classify_rule.json', 'r', encoding='utf-8') as f:
+        # 读取JSON数据
+        data = json.load(f)
     token = request.headers.get('token')
 
     if my_token.is_token_valid(token, SECRET_KEY):
@@ -234,7 +248,7 @@ def predict():
         print(np.argmax(predictions))
 
         # 返回预测结果
-        return jsonify({'label': str(label)})
+        return jsonify({'garbage': str(data[str(label)])})
 
     else:
         return json.dumps({"code": 404, "msg":  "请先进行登录"})
