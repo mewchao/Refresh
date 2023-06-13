@@ -9,11 +9,12 @@ import tensorflow as tf
 from PIL import Image
 import my_model
 from datetime import datetime, timedelta
-import token
+import my_token
 
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
+SECRET_KEY="sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
 
 # app.config['SQLALCHEMY_DATABASE_URI'] = "mysql://账号:密码@数据库ip地址:端口号/数据库名"
 app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://root:123456@127.0.0.1:3306/winter"
@@ -150,81 +151,89 @@ def text_classification():
     if request.method == 'POST':
         word = request.form.get('word')
         key = request.form.get('key')
-    conn = http.client.HTTPSConnection('apis.tianapi.com')  # 接口域名
-    params = urllib.parse.urlencode({'key': key, 'word': word})
-    headers = {'Content-type': 'application/x-www-form-urlencoded'}
-    conn.request('POST', '/lajifenlei/index', params, headers)
-    tianapi = conn.getresponse()
-    result = tianapi.read()
-    data = result.decode('utf-8')
-    # 获取的返回字典
-    dict_data = json.loads(data)
+        token =request.form.get('token')
+    if my_token.is_token_valid(token, SECRET_KEY):
+        conn = http.client.HTTPSConnection('apis.tianapi.com')  # 接口域名
+        params = urllib.parse.urlencode({'key': key, 'word': word})
+        headers = {'Content-type': 'application/x-www-form-urlencoded'}
+        conn.request('POST', '/lajifenlei/index', params, headers)
+        tianapi = conn.getresponse()
+        result = tianapi.read()
+        data = result.decode('utf-8')
+        # 获取的返回字典
+        dict_data = json.loads(data)
 
-    code = dict_data['code']
-    msg = dict_data['msg']
-    list_data = dict_data['result']['list']  # 获取'result'中的'list'列表.一个包含一个字典元素的列表
-    new_list_data = []
+        code = dict_data['code']
+        msg = dict_data['msg']
+        list_data = dict_data['result']['list']  # 获取'result'中的'list'列表.一个包含一个字典元素的列表
+        new_list_data = []
 
-    for item in list_data:
-        name = item['name']  # 提取'name'键对应的值
-        type = item['type']  # 提取'type'键对应的值
-        # 根据对应的值给出类型
-        if type == 0:
-            type_transform = "可回收"
-        if type == 1:
-            type_transform = "有害"
-        if type == 2:
-            type_transform = "厨余(湿)"
-        if type == 3:
-            type_transform = "其他(干)"
-        explain = item['explain']  # 提取'explain'键对应的值K
-        contain = item['contain']  # 提取'contain'键对应的值
-        tip = item['tip']  # 提取'tip'键对应的值
-        # 新增键值：
-        item.update({"type_name": type_transform})
-        new_list_data.append(item)
-    try:
-        new_list_data = {"code": code, "msg": msg, "result": new_list_data}
-        return json.dumps(new_list_data)
-    except ValueError as e:
-        return json.dumps({'error': str(e)})
-
+        for item in list_data:
+            name = item['name']  # 提取'name'键对应的值
+            type = item['type']  # 提取'type'键对应的值
+            # 根据对应的值给出类型
+            if type == 0:
+                type_transform = "可回收"
+            if type == 1:
+                type_transform = "有害"
+            if type == 2:
+                type_transform = "厨余(湿)"
+            if type == 3:
+                type_transform = "其他(干)"
+            explain = item['explain']  # 提取'explain'键对应的值K
+            contain = item['contain']  # 提取'contain'键对应的值
+            tip = item['tip']  # 提取'tip'键对应的值
+            # 新增键值：
+            item.update({"type_name": type_transform})
+            new_list_data.append(item)
+        try:
+            new_list_data = {"code": code, "msg": msg, "result": new_list_data}
+            return json.dumps(new_list_data)
+        except ValueError as e:
+            return json.dumps({'error': str(e)})
+    else:
+        return json.dumps({"code": 404, "msg":  "请先进行登录"})
 
 @app.route('/app/picture_classification', methods=['POST'])
 def predict():
-    # 加载模型
-    model = tf.keras.models.load_model('my_model')
+    token =request.form.get('token')
 
-    # 读取图片数据
-    img_file = request.files['image']
+    if my_token.is_token_valid(token, SECRET_KEY):
+        # 加载模型
+        my_model = tf.keras.models.load_model('my_model')
 
-    # 读取待识别的图片
-    image = Image.open(img_file)
+        # 读取图片数据
+        img_file = request.files['image']
 
-    # 将图片转换为28x28的灰度图像
-    image = image.convert('L').resize((180, 180))
+        # 读取待识别的图片
+        image = Image.open(img_file)
 
-    # 这行代码的作用是将图像数据转换为 NumPy 数组，并将其形状重塑为 (1, 180, 180)。
-    # 其中，1 表示批次大小，28 表示图像高度，28 表示图像宽度。同时，将数组中的所有值除以 255.0，以将它们缩放到 [0, 1] 的范围内。
-    input_image = np.array(image).reshape((1, 180, 180)) / 255.0
+        # 将图片转换为28x28的灰度图像
+        image = image.convert('L').resize((180, 180))
 
-    # 假设您的输入张量是 `input_tensor`
-    input_tensor = tf.expand_dims(input_image, axis=-1)  # 在最后一个轴上添加通道维度
-    input_tensor = tf.repeat(input_tensor, 3, axis=-1)  # 复制通道维度
-    # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
+        # 这行代码的作用是将图像数据转换为 NumPy 数组，并将其形状重塑为 (1, 180, 180)。
+        # 其中，1 表示批次大小，28 表示图像高度，28 表示图像宽度。同时，将数组中的所有值除以 255.0，以将它们缩放到 [0, 1] 的范围内。
+        input_image = np.array(image).reshape((1, 180, 180)) / 255.0
 
-    predictions = model.predict(input_tensor)
+        # 假设您的输入张量是 `input_tensor`
+        input_tensor = tf.expand_dims(input_image, axis=-1)  # 在最后一个轴上添加通道维度
+        input_tensor = tf.repeat(input_tensor, 3, axis=-1)  # 复制通道维度
+        # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
 
-    # 获取预测结果的标签
-    label = np.argmax(predictions)
+        predictions = my_model.predict(input_tensor)
 
-    # 输出预测结果
-    print(predictions)
-    print(np.argmax(predictions))
+        # 获取预测结果的标签
+        label = np.argmax(predictions)
 
-    # 返回预测结果
-    return jsonify({'label': str(label)})
+        # 输出预测结果
+        print(predictions)
+        print(np.argmax(predictions))
 
+        # 返回预测结果
+        return jsonify({'label': str(label)})
+
+    else:
+        return json.dumps({"code": 404, "msg":  "请先进行登录"})
 
 if __name__ == '__main__':
     with app.app_context():
