@@ -7,6 +7,8 @@ import http.client, urllib, json
 import jwt
 import tensorflow as tf
 from PIL import Image
+from matplotlib import pyplot as plt
+
 import my_model
 from datetime import datetime, timedelta
 import my_token
@@ -150,8 +152,8 @@ def text_classification():
     # 调用api
     if request.method == 'POST':
         word = request.form.get('word')
-        key = request.form.get('key')
-        token =request.form.get('token')
+        key = "6b8c7b0e789eeea19781760728d72be9"
+        token = request.headers.get('token')
     if my_token.is_token_valid(token, SECRET_KEY):
         conn = http.client.HTTPSConnection('apis.tianapi.com')  # 接口域名
         params = urllib.parse.urlencode({'key': key, 'word': word})
@@ -196,7 +198,7 @@ def text_classification():
 
 @app.route('/app/picture_classification', methods=['POST'])
 def predict():
-    token =request.form.get('token')
+    token = request.headers.get('token')
 
     if my_token.is_token_valid(token, SECRET_KEY):
         # 加载模型
@@ -220,7 +222,9 @@ def predict():
         input_tensor = tf.repeat(input_tensor, 3, axis=-1)  # 复制通道维度
         # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
 
-        predictions = my_model.predict(input_tensor)
+
+        print(input_image)
+        predictions = my_model.predict(input_tensor)[0]
 
         # 获取预测结果的标签
         label = np.argmax(predictions)

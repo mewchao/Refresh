@@ -1,0 +1,80 @@
+# import tensorflow as tf
+# import matplotlib.pyplot as plt
+# import numpy as np
+# from PIL import Image
+#
+# # 加载 MNIST 数据集  mnist.load_data()函数加载数据集，并将其拆分成训练集和测试集
+# mnist = tf.keras.datasets.mnist
+# (x_train, y_train), (x_test, y_test) = mnist.load_data()
+#
+# # print(x_train)
+# # print(y_train)
+# # print(x_test)
+# # print(y_test)
+#
+# # 将数据标准化到 0 到 1 的范围内
+# x_train, x_test = x_train / 255.0, x_test / 255.0
+#
+#
+# # 定义模型结构
+# model = tf.keras.models.Sequential([
+#     # Flatten 层将这个二维的输入张量转换为一个大小为 784 的一维张量，即一个长度为 784 的向量。然后，这个一维向量可以作为全连接神经网络的输入，进行后续的训练和预测操作。
+#     tf.keras.layers.Flatten(input_shape=(28, 28)),
+#     #  我们使用 Dense 层来定义一个具有 128 个神经元的隐藏层，该隐藏层采用 ReLU 激活函数（activation='relu'）。其中，参数 128 指定了该层的神经元数量
+#     tf.keras.layers.Dense(128, activation='relu'),
+#     # 使用 Dropout 层来定义一个丢弃率为 0.2 的 Dropout 操作。这意味着，在训练过程中，该层中的每个神经元都有 20%
+#     # 的概率被随机丢弃，即将其输出设置为零。这样做可以迫使模型不依赖于任何一个特定的神经元，从而增加模型的鲁棒性和泛化能力。
+#     tf.keras.layers.Dropout(0.2),
+#     # 输出大小为 10   第四层也是Dense层，包含10个神经元，没有激活函数。这一层输出的结果可以看作是每个数字的"得分"，最终我们将根据这些得分选择最有可能的数字。
+#     tf.keras.layers.Dense(10)
+# ])
+#
+#
+# # 编译模型
+# # 选择优化算法：在这里我们选择了 Adam 算法，它可以帮助我们更快地找到最优解。
+# # 选择损失函数：我们选择稀疏分类交叉熵作为损失函数，因为我们的标签是整数形式的类别，而不是 one-hot 编码形式的向量。简单来说，损失函数告诉我们模型预测的输出与真实值之间有多大的差距。
+# # 选择评价指标：我们使用准确性（accuracy）作为评价指标，在训练和测试期间都会计算，以衡量模型的性能如何。
+# model.compile(optimizer='adam',
+#               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+#               metrics=['accuracy'])
+#
+#
+# # 训练模型
+# # 以 MNIST 数据集为例，x_train 是一个形状为 (60000, 28, 28) 的三维数组，表示有 60000 张 28x28 的灰度图像。
+# # y_train 是一个形状为 (60000,) 的一维数组，表示这些图像对应的真实数字标签。
+# model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
+#
+#
+# # 评估模型
+# model.evaluate(x_test, y_test)
+#
+#
+# # 测试模型
+# predictions = model.predict(x_test[:1])
+# print(tf.argmax(predictions, axis=1))
+# print()
+# print()
+#
+# # 数据集可视化
+# images = x_test[:1]
+# for i in range(len(images)):
+#     plt.imshow(images[i], cmap='gray')
+#     plt.show()
+#
+#
+# # 读取待识别的图片
+# image = Image.open(r"D:\cpp\wch\test3.png")
+#
+# # 将图片转换为28x28的灰度图像
+# image = image.convert('L').resize((28, 28))
+#
+# # 将图像转换为张量形式，并进行预测  2 / 2
+# # 这行代码的作用是将图像数据转换为 NumPy 数组，并将其形状重塑为 (1, 28, 28)。
+# # 其中，1 表示批次大小，28 表示图像高度，28 表示图像宽度。同时，将数组中的所有值除以 255.0，以将它们缩放到 [0, 1] 的范围内。
+# input_image = np.array(image).reshape((1, 28, 28)) / 255.0
+#
+# predictions_2 = model.predict(input_image)
+#
+# # 输出预测结果
+# print(predictions_2)
+# print(tf.argmax(predictions_2, axis=1))

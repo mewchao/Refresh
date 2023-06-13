@@ -48,13 +48,9 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 
 num_classes = 40
-
 IMG_SIZE = 180
 
-
-
 model = tf.keras.Sequential([
-
   tf.keras.layers.Rescaling(1./255),
   tf.keras.layers.Conv2D(32, 3, activation='relu'),
   tf.keras.layers.MaxPooling2D(),
@@ -64,6 +60,8 @@ model = tf.keras.Sequential([
   tf.keras.layers.MaxPooling2D(),
   tf.keras.layers.Flatten(),
   tf.keras.layers.Dense(128, activation='relu'),
+  # 输出大小为 num_classes   第四层也是Dense层，包含10个神经元，没有激活函数。这一层输出的结果可以看作是每个数字的"得分"，
+  # 最终我们将根据这些得分选择最有可能的数字。
   tf.keras.layers.Dense(num_classes)
 ])
 
