@@ -49,7 +49,12 @@ val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 num_classes = 40
 
+IMG_SIZE = 180
+
+
+
 model = tf.keras.Sequential([
+
   tf.keras.layers.Rescaling(1./255),
   tf.keras.layers.Conv2D(32, 3, activation='relu'),
   tf.keras.layers.MaxPooling2D(),

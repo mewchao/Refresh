@@ -5,9 +5,12 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_sqlalchemy.session import Session
 import http.client, urllib, json
 import jwt
-import model
+import tensorflow as tf
+from PIL import Image
+import my_model
 from datetime import datetime, timedelta
 import token
+
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
@@ -29,8 +32,6 @@ db = SQLAlchemy(app)
 
 # Session 是 SQLAlchemy 中的一个类，用于管理数据库会话和事务
 Session = Session(db)
-
-
 
 
 # 数据库的模型，继承
@@ -58,7 +59,6 @@ class Users(db.Model):
     integral = db.Column(db.Integer, default=0)
     # 外键 需要传参-ForeignKey,表名.id
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
-
 
 
 @app.route('/user/register', methods=['POST'])
@@ -111,7 +111,6 @@ def login():
     if username and password:
         # 查询到此用户
         if len(data) >= 1:
-
             # 生成token 5 小时内有效
             payload = {'username': username, 'exp': datetime.utcnow() + timedelta(hours=5)}
             secret_key = 'sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds'
@@ -125,10 +124,12 @@ def login():
         return jsonify({'code': '401', 'msg': '账号或密码不正确'})
     return jsonify({'code': '404', 'msg': '账号或密码为空'})
 
+
 @app.route('/user/logout')
 def logout():
     # 清除Session
     session.pop('username', None)
+
 
 # 用户界面
 @app.route('/user/index')
@@ -140,6 +141,7 @@ def api_user_profile():
     user = Users.query.filter_by(name=username).all()
     # 将 Python 对象转换成 JSON 格式并返回
     return jsonify(user)
+
 
 # 文字识别并且返回识别结果
 @app.route('/api/app/text_classification', methods=['POST'])
@@ -187,18 +189,38 @@ def text_classification():
     except ValueError as e:
         return json.dumps({'error': str(e)})
 
+
 @app.route('/app/picture_classification', methods=['POST'])
 def predict():
+    # 加载模型
+    model = tf.keras.models.load_model('my_model')
+
     # 读取图片数据
     img_file = request.files['image']
-    img = Image.open(img_file.stream)
-    img = img.resize((150, 150))
-    img = np.array(img) / 255.0
-    img = np.expand_dims(img, axis=0)
 
-    # 进行预测
-    pred = model.predict(img)[0]
-    label = np.argmax(pred)
+    # 读取待识别的图片
+    image = Image.open(img_file)
+
+    # 将图片转换为28x28的灰度图像
+    image = image.convert('L').resize((180, 180))
+
+    # 这行代码的作用是将图像数据转换为 NumPy 数组，并将其形状重塑为 (1, 180, 180)。
+    # 其中，1 表示批次大小，28 表示图像高度，28 表示图像宽度。同时，将数组中的所有值除以 255.0，以将它们缩放到 [0, 1] 的范围内。
+    input_image = np.array(image).reshape((1, 180, 180)) / 255.0
+
+    # 假设您的输入张量是 `input_tensor`
+    input_tensor = tf.expand_dims(input_image, axis=-1)  # 在最后一个轴上添加通道维度
+    input_tensor = tf.repeat(input_tensor, 3, axis=-1)  # 复制通道维度
+    # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
+
+    predictions = model.predict(input_tensor)
+
+    # 获取预测结果的标签
+    label = np.argmax(predictions)
+
+    # 输出预测结果
+    print(predictions)
+    print(np.argmax(predictions))
 
     # 返回预测结果
     return jsonify({'label': str(label)})
