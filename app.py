@@ -323,7 +323,6 @@ def predict():
 
         # 返回预测结果
         return jsonify({'garbage': str(data[str(label)])})
-
     else:
         return json.dumps({"code": 404, "msg": "请先进行登录"})
 
