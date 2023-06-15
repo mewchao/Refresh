@@ -21,7 +21,7 @@ num_classes = 40
 class_names = list(range(num_classes))
 class_names = [str(i) for i in class_names]
 
-# 训练集对象
+# 训练数据集对象
 train_ds = tf.keras.utils.image_dataset_from_directory(
     data_dir,
     validation_split=0.2,
@@ -34,7 +34,7 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
     class_names=class_names,
 )
 
-# 测试集对象
+# 验证数据集对象
 val_ds = tf.keras.utils.image_dataset_from_directory(
     data_dir,
     validation_split=0.2,
@@ -82,10 +82,26 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dropout(0.2),
     tf.keras.layers.MaxPooling2D(),
 
+    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    # tf.keras.layers.MaxPooling2D(),
+
+    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    # tf.keras.layers.MaxPooling2D(),
+
+    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    # tf.keras.layers.MaxPooling2D(),
+
+    tf.keras.layers.Conv2D(32, 3, activation='relu'),
+    tf.keras.layers.Dropout(0.2),
+    # tf.keras.layers.MaxPooling2D(),
+
     tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
     # 创建一个最大池化层。它通常用于卷积神经网络中，以减少特征图的大小并提高模型的计算效率。
-    tf.keras.layers.MaxPooling2D(),
+    # tf.keras.layers.MaxPooling2D(),
 
     # 在卷积层和全连接层之间使用。
     tf.keras.layers.Flatten(),
@@ -102,24 +118,24 @@ model.compile(
     optimizer='adam',
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['acc'])
-
-# 训练模型
-history = model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=10
-)
+#
+# # 训练模型
+# history = model.fit(
+#     train_ds,
+#     validation_data=val_ds,
+#     epochs=10
+# )
 
 # 训练后看一下
-history.history.keys()
-
-plt.plot(history.epoch, history.history.get('loss'), label='loss')
-plt.plot(history.epoch, history.history.get('val_loss'), label='val_loss')
-plt.legend()
-
-plt.plot(history.epoch, history.history.get('acc'), label='acc')
-plt.plot(history.epoch, history.history.get('val_acc'), label='val_acc')
-plt.legend()
-
-# 保存模型
-model.save('my_model_drop')
+# history.history.keys()
+#
+# plt.plot(history.epoch, history.history.get('loss'), label='loss')
+# plt.plot(history.epoch, history.history.get('val_loss'), label='val_loss')
+# plt.legend()
+#
+# plt.plot(history.epoch, history.history.get('acc'), label='acc')
+# plt.plot(history.epoch, history.history.get('val_acc'), label='val_acc')
+# plt.legend()
+#
+# # 保存模型
+# model.save('my_model2')

@@ -11,10 +11,11 @@ import jwt
 import numpy as np
 import tensorflow as tf
 import my_token
+import my_model2
 
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = '"sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"'
+app.config['SECRET_KEY'] = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
 
 SECRET_KEY = "sjbdhajshuaikf56a9dsuadhusjhvdsada4789dsaugsaucsc979s6a1ds"
 
@@ -64,7 +65,7 @@ class Users(db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
 
 
-# 定义项目模型类
+
 # 定义项目模型类
 class Projects(db.Model):
     # 项目id
@@ -291,7 +292,7 @@ def predict():
 
     if my_token.is_token_valid(token, SECRET_KEY):
         # 加载模型
-        my_model = tf.keras.models.load_model('my_model')
+        my_model_drop = tf.keras.models.load_model('my_model2')
 
         # 读取图片数据
         img_file = request.files['image']
@@ -312,7 +313,7 @@ def predict():
         # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
 
         print(input_image)
-        predictions = my_model.predict(input_tensor)[0]
+        predictions = my_model_drop.predict(input_tensor)[0]
 
         # 获取预测结果的标签
         label = np.argmax(predictions)
