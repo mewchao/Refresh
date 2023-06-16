@@ -9,7 +9,7 @@ import jwt
 import numpy as np
 import tensorflow as tf
 import my_token
-from sql_class import app, Role, Users, Projects, db, SECRET_KEY, Session
+from sql_class import app , Users, Projects, db, SECRET_KEY, Session
 
 
 @app.route('/user/register', methods=['POST'])

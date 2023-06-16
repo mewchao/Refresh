@@ -1,5 +1,6 @@
 import tensorflow as tf
 import pathlib
+from matplotlib import pyplot as plt
 
 # 加载图像
 data_dir = pathlib.Path(r"D:\garbage\garbage_classify_v2\garbage_classify_v2\train")
@@ -66,10 +67,11 @@ IMG_SIZE = 180
 
 model = tf.keras.Sequential([
     tf.keras.layers.Rescaling(1. / 255),
+
     # tf.keras.layers.Conv2D 层是卷积层，用于处理二维图像数据。
-
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
     tf.keras.layers.Dropout(0.2),
+    # 池化层，用于对特征图进行最大池化操作
     tf.keras.layers.MaxPooling2D(),
 
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
@@ -78,27 +80,20 @@ model = tf.keras.Sequential([
 
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
     tf.keras.layers.Dropout(0.2),
-    # tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.MaxPooling2D(),
 
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
     tf.keras.layers.Dropout(0.2),
-    # tf.keras.layers.MaxPooling2D(),
-
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
-    tf.keras.layers.Dropout(0.2),
-    # tf.keras.layers.MaxPooling2D(),
-
-    tf.keras.layers.Conv2D(32, 3, activation='relu'),
-    tf.keras.layers.Dropout(0.2),
-    # tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.MaxPooling2D(),
 
     tf.keras.layers.Dropout(0.2),
     tf.keras.layers.Conv2D(32, 3, activation='relu'),
     # 创建一个最大池化层。它通常用于卷积神经网络中，以减少特征图的大小并提高模型的计算效率。
-    # tf.keras.layers.MaxPooling2D(),
+    tf.keras.layers.MaxPooling2D(),
 
     # 在卷积层和全连接层之间使用。
     tf.keras.layers.Flatten(),
+
     tf.keras.layers.Dropout(0.2),
     # 全连接层，用于处理一维向量数据
     tf.keras.layers.Dense(128, activation='relu'),
@@ -112,15 +107,15 @@ model.compile(
     optimizer='adam',
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['acc'])
-#
+
 # # 训练模型
 # history = model.fit(
 #     train_ds,
 #     validation_data=val_ds,
-#     epochs=10
+#     epochs=15
 # )
-
-# 训练后看一下
+#
+# # 训练后看一下
 # history.history.keys()
 #
 # plt.plot(history.epoch, history.history.get('loss'), label='loss')
@@ -132,4 +127,4 @@ model.compile(
 # plt.legend()
 #
 # # 保存模型
-# model.save('my_model2')
+# model.save('my_model3')
