@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from tkinter import Image
 from PIL import Image
 from flask import request, session, jsonify
-from flask_sqlalchemy.session import Session
 import http.client
 import json
 import urllib
@@ -246,15 +245,15 @@ def predict():
         input_tensor = tf.repeat(input_tensor, 3, axis=-1)  # 复制通道维度
         # 现在，`input_tensor` 是一个四维张量，形状为 `(None, 180, 180, 3)`
 
-        print(input_image)
+        # print(input_image)
         predictions = my_model_drop.predict(input_tensor)[0]
 
         # 获取预测结果的标签
         label = np.argmax(predictions)
 
         # 输出预测结果
-        print(predictions)
-        print(np.argmax(predictions))
+        # print(predictions)
+        # print(np.argmax(predictions))
 
         # 返回预测结果
         return jsonify({'garbage': str(data[str(label)])})
