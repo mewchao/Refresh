@@ -10,7 +10,7 @@ import jwt
 import numpy as np
 import tensorflow as tf
 import my_token
-from sql_class import app, Role, Users, Projects, db, SECRET_KEY
+from sql_class import app, Role, Users, Projects, db, SECRET_KEY, Session
 
 
 @app.route('/user/register', methods=['POST'])
@@ -81,6 +81,7 @@ def login():
 def logout():
     # 清除Session
     session.pop('username', None)
+    return jsonify({'code': '200', 'msg': '退出登录成功'})
 
 
 # 用户界面
@@ -89,10 +90,16 @@ def api_user_profile():
     # 如果已登录，得到用户名
     if 'username' in session:
         username = session.get('username')
-    # 从数据库中获取用户信息
-    user = Users.query.filter_by(name=username).all()
-    # 将 Python 对象转换成 JSON 格式并返回
-    return jsonify(user)
+        # 从数据库中获取用户信息
+        user = Users.query.filter_by(username=username).all()[0]
+        # 将 Python 对象转换成 JSON 格式并返回
+        return json.dumps({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'integral': user.integral})
+    else:
+        return json.dumps({"code": 404, "msg": "请先进行登录"})
 
 
 # 定义项目列表的API路由
@@ -223,14 +230,16 @@ def predict():
         img_file = request.files['image']
 
         # 读取待识别的图片
-        image = Image.open(img_file)
+        image = Image.open(img_file.stream)
 
         # 将图片转换为28x28的灰度图像
         image = image.convert('L').resize((180, 180))
 
         # 这行代码的作用是将图像数据转换为 NumPy 数组，并将其形状重塑为 (1, 180, 180)。
         # 其中，1 表示批次大小，28 表示图像高度，28 表示图像宽度。同时，将数组中的所有值除以 255.0，以将它们缩放到 [0, 1] 的范围内。
-        input_image = np.array(image).reshape((1, 180, 180)) / 255.0
+
+        image_array = np.array(image.getdata()).reshape((image.size[1], image.size[0]))
+        input_image = image_array.reshape((1, 180, 180)) / 255.0
 
         # 假设您的输入张量是 `input_tensor`
         input_tensor = tf.expand_dims(input_image, axis=-1)  # 在最后一个轴上添加通道维度

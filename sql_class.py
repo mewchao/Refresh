@@ -27,6 +27,7 @@ db = SQLAlchemy(app)
 # Session 是 SQLAlchemy 中的一个类，用于管理数据库会话和事务
 Session = Session(db)
 
+
 # 数据库的模型，继承
 class Role(db.Model):
     # 定义表名
